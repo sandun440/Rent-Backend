@@ -1,0 +1,17 @@
+{
+  "name": "rent-backend",
+  "version": "1.0.0",
+  "description": "Backend service for a Bicycle Rental System. Provides RESTful APIs for managing bicycles, rentals, users, and bookings with secure authentication and database integration.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "express": "^5.1.0"
+  }
+}
