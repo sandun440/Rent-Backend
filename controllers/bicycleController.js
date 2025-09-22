@@ -1,6 +1,4 @@
-
 import Bicycle from "../models/Bicycle.js";
-
 
 // Get all bicycles
 export const getAllBicycles = async (req, res) => {
@@ -34,13 +32,14 @@ export const getBicycleById = async (req, res) => {
   }
 };
 
-// Update a bicycle
+// Update a bicycle by bicyclenumber
 export const updateBicycle = async (req, res) => {
   try {
-    const bicycle = await Bicycle.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const bicycle = await Bicycle.findOneAndUpdate(
+      { bicyclenumber: req.params.bicyclenumber },
+      req.body,
+      { new: true, runValidators: true }
+    );
     if (!bicycle) return res.status(404).json({ error: "Bicycle not found" });
     res.json(bicycle);
   } catch (err) {
@@ -48,10 +47,10 @@ export const updateBicycle = async (req, res) => {
   }
 };
 
-// Delete a bicycle
+// Delete a bicycle by bicyclenumber
 export const deleteBicycle = async (req, res) => {
   try {
-    const bicycle = await Bicycle.findByIdAndDelete(req.params.id);
+    const bicycle = await Bicycle.findOneAndDelete({ bicyclenumber: req.params.bicyclenumber });
     if (!bicycle) return res.status(404).json({ error: "Bicycle not found" });
     res.json({ message: "Bicycle deleted" });
   } catch (err) {
