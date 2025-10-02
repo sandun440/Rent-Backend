@@ -4,10 +4,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import bicycleRoutes from "./routes/bicycle.js";
 import userRoutes from "./routes/users.js";
+import orderRoutes from "./routes/orders.js";
 
 dotenv.config();
 
-// console.log("MONGO_URI:", process.env.MONGO_URI);
 
 const app = express();
 const PORT = 5000;
@@ -22,6 +22,7 @@ mongoose
 
   app.use("/api", bicycleRoutes);
   app.use("/api", userRoutes);
+  app.use("/api", orderRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
