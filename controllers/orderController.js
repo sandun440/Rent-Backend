@@ -15,7 +15,7 @@ export const getAllOrders = async (req, res) => {
 // Create a new order
 export const createOrder = async (req, res) => {
   try {
-    const { userEmail, name, bicyclenumber, startTime, endTime } = req.body;
+    const { userEmail, name, bicyclenumber, startTime, endTime, rentalType } = req.body;
 
     // Validate user exists
     const user = await User.findOne({ email: userEmail, isActive: true });
@@ -34,21 +34,35 @@ export const createOrder = async (req, res) => {
     if (endTime) {
       const end = new Date(endTime);
       if (end <= start) return res.status(400).json({ error: "End time must be after start time" });
-      const durationHours = (end - start) / (1000 * 60 * 60); // Convert milliseconds to hours
-      totalCost = Math.ceil(durationHours) * bicycle.pricePerHour; // Round up to nearest hour
-    } else {
-      // If no endTime, set totalCost to 0 (to be updated later)
-      totalCost = 0;
+
+      const durationHours = (end - start) / (1000 * 60 * 60);
+      const durationDays = (end - start) / (1000 * 60 * 60 * 24);
+      const durationWeeks = (end - start) / (1000 * 60 * 60 * 24 * 7);
+
+      switch (rentalType) {
+        case "hourly":
+          totalCost = Math.ceil(durationHours) * bicycle.pricePerHour;
+          break;
+        case "daily":
+          totalCost = Math.ceil(durationDays) * bicycle.pricePerDay;
+          break;
+        case "weekly":
+          totalCost = Math.ceil(durationWeeks) * bicycle.pricePerWeek;
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid rental type" });
+      }
     }
 
     const order = new Order({
       userEmail,
       name,
       bicyclenumber,
+      rentalType,
       startTime: start,
       endTime: endTime ? new Date(endTime) : null,
       totalCost,
-      status: "active", // Set to active upon creation
+      status: "active",
     });
 
     bicycle.isAvailable = false;
@@ -72,28 +86,41 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-// Update an order (e.g., end time or status)
+// Update an order (end time, status, etc.)
 export const updateOrder = async (req, res) => {
   try {
     const { endTime, status } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
     const updateData = {};
     if (endTime) updateData.endTime = new Date(endTime);
     if (status) updateData.status = status;
 
-    const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-
-    // Recalculate totalCost if endTime is provided or changed
-    let newTotalCost = order.totalCost;
+    // Recalculate totalCost if endTime is provided
     if (endTime) {
       const start = new Date(order.startTime);
       const end = new Date(endTime);
       if (end <= start) return res.status(400).json({ error: "End time must be after start time" });
-      const durationHours = (end - start) / (1000 * 60 * 60); // Convert milliseconds to hours
+
       const bicycle = await Bicycle.findOne({ bicyclenumber: order.bicyclenumber });
       if (!bicycle) return res.status(400).json({ error: "Bicycle not found" });
-      newTotalCost = Math.ceil(durationHours) * bicycle.pricePerHour; // Round up to nearest hour
-      updateData.totalCost = newTotalCost;
+
+      const durationHours = (end - start) / (1000 * 60 * 60);
+      const durationDays = (end - start) / (1000 * 60 * 60 * 24);
+      const durationWeeks = (end - start) / (1000 * 60 * 60 * 24 * 7);
+
+      switch (order.rentalType) {
+        case "hourly":
+          updateData.totalCost = Math.ceil(durationHours) * bicycle.pricePerHour;
+          break;
+        case "daily":
+          updateData.totalCost = Math.ceil(durationDays) * bicycle.pricePerDay;
+          break;
+        case "weekly":
+          updateData.totalCost = Math.ceil(durationWeeks) * bicycle.pricePerWeek;
+          break;
+      }
     }
 
     const updatedOrder = await Order.findByIdAndUpdate(
@@ -101,10 +128,9 @@ export const updateOrder = async (req, res) => {
       { $set: updateData },
       { new: true, runValidators: true }
     );
-    if (!updatedOrder) return res.status(404).json({ error: "Order not found" });
 
-    // If order is completed, make bicycle available again
-    if (status === "completed") {
+    // If order completed, release bicycle
+    if (status === "completed" && updatedOrder) {
       const bicycle = await Bicycle.findOne({ bicyclenumber: updatedOrder.bicyclenumber });
       if (bicycle) {
         bicycle.isAvailable = true;
