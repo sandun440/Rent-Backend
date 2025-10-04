@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllUsers, createUser, getUserById, updateUser, deleteUser } from "../controllers/userController.js";
+import { getAllUsers, createUser, getUserById, updateUser, blockUser } from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -14,8 +14,5 @@ router.get("/users/:email", getUserById);
 
 // Update a user by email
 router.put("/users/:email", updateUser);
-
-// Delete a user by email
-router.delete("/users/:email", deleteUser);
 
 export default router;
