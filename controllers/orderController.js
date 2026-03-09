@@ -12,14 +12,24 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
+// Get orders by user email
+export const getOrdersByEmail = async (req, res) => {
+  try {
+    const orders = await Order.find({ userEmail: req.params.email });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Create a new order
 export const createOrder = async (req, res) => {
   try {
     const { userEmail, name, bicyclenumber, startTime, endTime, rentalType } = req.body;
 
     // Validate user exists
-    const user = await User.findOne({ email: userEmail, isActive: true });
-    if (!user) return res.status(400).json({ error: "User not found or inactive" });
+    const user = await User.findOne({ email: userEmail, isBlocked: false });
+    if (!user) return res.status(400).json({ error: "User not found or blocked" });
     if (user.name !== name) return res.status(400).json({ error: "Name does not match user" });
 
     // Check if bicycle exists and is available

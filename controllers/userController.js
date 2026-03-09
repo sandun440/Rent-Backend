@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 // Get all users (exclude blocked ones)
 export const getAllUsers = async (req, res) => {
@@ -16,7 +17,8 @@ export const createUser = async (req, res) => {
   try {
     const { name, email, password, type } = req.body;
     const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ error: "Email already registered" });
+    if (existingUser)
+      return res.status(400).json({ error: "Email already registered" });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -28,7 +30,9 @@ export const createUser = async (req, res) => {
       type,
     });
     await user.save();
-    res.status(201).json({ message: "User registered successfully", user: { name, email } });
+    res
+      .status(201)
+      .json({ message: "User registered successfully", user: { name, email } });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -37,7 +41,10 @@ export const createUser = async (req, res) => {
 // Get a single user by email
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.params.email, isBlocked: false });
+    const user = await User.findOne({
+      email: req.params.email,
+      isBlocked: false,
+    });
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json({ name: user.name, email: user.email });
   } catch (err) {
@@ -59,13 +66,42 @@ export const updateUser = async (req, res) => {
     const user = await User.findOneAndUpdate(
       { email: req.params.email, isBlocked: false },
       { $set: updateData },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ message: "User updated successfully", user: { name: user.name, email: user.email } });
+    res.json({
+      message: "User updated successfully",
+      user: { name: user.name, email: user.email },
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
 
+// Login user
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email, isBlocked: false });
+    if (!user)
+      return res.status(400).json({ error: "Invalid email or password" });
 
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(400).json({ error: "Invalid email or password" });
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, type: user.type },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" },
+    );
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: { name: user.name, email: user.email, type: user.type },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
