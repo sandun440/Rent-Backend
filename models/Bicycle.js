@@ -11,6 +11,7 @@ const bicycleSchema = new mongoose.Schema({
   pricePerDay: { type: Number, required: true },
   pricePerWeek: { type: Number, required: true },
   isAvailable: { type: Boolean, default: true },
+  image: { type: String },
 });
 
 export default mongoose.model("Bicycle", bicycleSchema);
